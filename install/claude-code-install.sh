@@ -79,8 +79,15 @@ $STD npm install -g @anthropic-ai/claude-code
 msg_ok "Installed Claude Code"
 
 msg_info "Setting up claude-nine"
-$STD su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine'
-$STD su - dev -c 'cd ~/claude-nine && npm install'
+# Handle git clone without using $STD to avoid silent function issues
+if [ -d "/home/dev/claude-nine" ]; then
+  su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
+fi
+su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine' &>/dev/null
+# Only run npm install if package.json exists
+if [ -f "/home/dev/claude-nine/package.json" ]; then
+  su - dev -c 'cd ~/claude-nine && npm install' &>/dev/null
+fi
 msg_ok "Set up claude-nine"
 
 msg_info "Creating Development Directories"
