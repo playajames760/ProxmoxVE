@@ -31,7 +31,7 @@ catch_errors
 
 function default_settings() {
   CT_TYPE="1"
-  PW=""
+  PW="$(openssl rand -base64 8)"
   CT_ID=$NEXTID
   HN=$NSAPP
   DISK_SIZE="$var_disk"
@@ -79,6 +79,24 @@ start
 build_container
 description
 
+# Read the dev user password from the container
+if pct exec $CTID -- test -f /tmp/dev_password; then
+  DEV_PW=$(pct exec $CTID -- cat /tmp/dev_password)
+  pct exec $CTID -- rm /tmp/dev_password
+else
+  DEV_PW="Not set"
+fi
+
 msg_ok "Completed Successfully!\n"
-echo -e "${APP} should be reachable by going to the following URL.
-         ${BL}ssh dev@${IP}${CL} \n"
+echo -e "${APP} Claude Code Development Environment has been installed successfully."
+echo -e ""
+echo -e "Access Information:"
+echo -e "  ${BL}SSH:${CL} ssh dev@${IP}"
+echo -e "  ${BL}Username:${CL} dev"
+echo -e "  ${BL}Password:${CL} ${GN}$DEV_PW${CL}"
+echo -e ""
+echo -e "First-time setup:"
+echo -e "  • Configure your Anthropic API key"
+echo -e "  • Set up MCP servers (optional)"
+echo -e "  • Start coding with Claude!"
+echo -e ""

@@ -29,7 +29,7 @@
   ],
   "default_credentials": {
     "username": "dev",
-    "password": "generated during setup"
+    "password": "randomly generated and displayed after creation"
   },
   "notes": [
     {
@@ -37,15 +37,27 @@
       "type": "info"
     },
     {
+      "text": "Password is randomly generated and displayed after LXC creation",
+      "type": "info"
+    },
+    {
       "text": "You need an Anthropic API key to use Claude Code. Get one from https://console.anthropic.com/settings/keys",
       "type": "warning"
     },
     {
-      "text": "First-run configuration wizard will help you set up your API key and MCP servers",
+      "text": "Claude Code uses API-based billing through your Anthropic account",
+      "type": "warning"
+    },
+    {
+      "text": "Run 'claude-setup' for first-time configuration wizard",
       "type": "info"
     },
     {
-      "text": "Includes claude-nine for enhanced command line interfaces and 5 MCP servers (Supabase, DigitalOcean, Shopify, Puppeteer, Upstash)",
+      "text": "Run 'claude-status' to check configuration status",
+      "type": "info"
+    },
+    {
+      "text": "Includes claude-nine for enhanced CLI and 5 optional MCP servers (Supabase, DigitalOcean, Shopify, Puppeteer, Upstash)",
       "type": "info"
     }
   ]

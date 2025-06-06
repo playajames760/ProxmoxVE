@@ -55,6 +55,19 @@ msg_ok "Installed Package Managers"
 msg_info "Setting up Development User"
 useradd -m -s /bin/zsh -G sudo dev
 echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
+
+# Set password for dev user if provided
+if [[ -n "$PW" ]]; then
+  echo "dev:$PW" | chpasswd
+  # Store password for display in main script
+  echo "$PW" > /tmp/dev_password
+  DEV_PW="$PW"
+else
+  # Generate random password if none provided
+  DEV_PW=$(openssl rand -base64 12)
+  echo "dev:$DEV_PW" | chpasswd
+  echo "$DEV_PW" > /tmp/dev_password
+fi
 msg_ok "Created Development User"
 
 msg_info "Installing Oh My Zsh"
@@ -74,10 +87,57 @@ msg_info "Creating Development Directories"
 su - dev -c 'mkdir -p ~/workspace ~/projects ~/.config/claude-code'
 msg_ok "Created Development Directories"
 
+msg_info "Creating CLI Helper Scripts"
+# Create a convenient setup command
+cat > /usr/local/bin/claude-setup << 'EOF'
+#!/bin/bash
+# Quick setup script for Claude Code
+if [ "$EUID" -eq 0 ]; then
+    echo "Please run this as the dev user, not as root"
+    exit 1
+fi
+
+/home/dev/first-run.sh
+EOF
+chmod +x /usr/local/bin/claude-setup
+
+# Create a status command
+cat > /usr/local/bin/claude-status << 'EOF'
+#!/bin/bash
+# Show Claude Code configuration status
+echo "Claude Code Status:"
+echo "==================="
+
+if [ -f ~/.claude-configured ]; then
+    echo "✅ Claude Code is configured"
+    if [ -n "$ANTHROPIC_API_KEY" ]; then
+        echo "✅ API key is set in environment"
+    else
+        echo "⚠️  API key not in current environment (may need to restart shell)"
+    fi
+else
+    echo "❌ Claude Code not configured - run 'claude-setup' to configure"
+fi
+
+echo
+echo "MCP Servers:"
+claude mcp list 2>/dev/null || echo "No MCP servers configured"
+
+echo
+echo "Useful commands:"
+echo "• claude-setup   - Configure Claude Code"
+echo "• claude help    - Show Claude commands"
+echo "• claude chat    - Start interactive chat"
+EOF
+chmod +x /usr/local/bin/claude-status
+msg_ok "Created CLI Helper Scripts"
+
 msg_info "Configuring SSH"
 sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
 systemctl restart ssh
 msg_ok "Configured SSH"
 
@@ -105,13 +165,15 @@ echo "
 ║  • ~/projects     - Project directory                        ║
 ║  • ~/claude-nine  - claude-nine installation                 ║
 ║                                                              ║
-║  First Time Setup:                                           ║
-║  1. Set your Claude API key:                                 ║
-║     export ANTHROPIC_API_KEY='your-api-key'                  ║
-║     claude auth $ANTHROPIC_API_KEY                           ║
+║  Authentication:                                             ║
+║  Claude Code uses API-based authentication with your         ║
+║  Anthropic API key. Usage is billed through your             ║
+║  Anthropic account.                                          ║
 ║                                                              ║
-║  2. Get API key from:                                        ║
-║     https://console.anthropic.com/settings/keys              ║
+║  Get API key from:                                           ║
+║  https://console.anthropic.com/settings/keys                 ║
+║                                                              ║
+║  Setup Helper: ~/first-run.sh                                ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 "
@@ -226,6 +288,9 @@ if [ ! -f ~/.claude-configured ]; then
     echo "To use Claude Code, you need an Anthropic API key."
     echo "Get your API key from: https://console.anthropic.com/settings/keys"
     echo
+    echo "Note: Claude Code uses API-based billing. You'll be charged for"
+    echo "API usage based on your interactions with Claude."
+    echo
     read -s -p "Enter your Anthropic API key: " api_key
     echo
     
@@ -233,20 +298,26 @@ if [ ! -f ~/.claude-configured ]; then
         echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.zshrc
         echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.bashrc
         export ANTHROPIC_API_KEY="$api_key"
-        claude auth $api_key
-        touch ~/.claude-configured
-        echo "Claude Code configured successfully!"
-        echo
-        echo "Would you like to set up MCP servers now?"
-        read -p "Setup MCP servers? [y/N]: " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            ~/setup-mcp.sh
+        
+        # Test the API key by authenticating
+        if claude auth "$api_key" &>/dev/null; then
+            touch ~/.claude-configured
+            echo "✅ Claude Code configured successfully!"
+            echo
+            echo "Would you like to set up MCP servers now?"
+            read -p "Setup MCP servers? [y/N]: " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                ~/setup-mcp.sh
+            fi
+        else
+            echo "❌ Failed to authenticate with the provided API key."
+            echo "Please check your API key and try again by running:"
+            echo "~/first-run.sh"
         fi
     else
         echo "Skipping Claude Code configuration. You can set it up later by running:"
-        echo "export ANTHROPIC_API_KEY='your-api-key'"
-        echo "claude auth \$ANTHROPIC_API_KEY"
+        echo "~/first-run.sh"
     fi
 fi
 EOF

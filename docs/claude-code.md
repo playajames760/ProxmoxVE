@@ -24,12 +24,21 @@ bash -c "$(wget -qO - https://github.com/community-scripts/ProxmoxVE/raw/main/ct
    ```bash
    ssh dev@<container-ip>
    ```
+   Use the password displayed after LXC creation.
 
 2. **API Key Configuration**:
+   ```bash
+   claude-setup    # Run the setup wizard
+   ```
    - Get your Anthropic API key from: https://console.anthropic.com/settings/keys
-   - The first-run wizard will guide you through setup
+   - Note: Claude Code uses API-based billing through your Anthropic account
 
-3. **MCP Servers** (Optional):
+3. **Check Status**:
+   ```bash
+   claude-status   # Check configuration status
+   ```
+
+4. **MCP Servers** (Optional):
    - Supabase: Database and authentication
    - DigitalOcean: Cloud infrastructure management
    - Shopify: E-commerce development
@@ -37,6 +46,12 @@ bash -c "$(wget -qO - https://github.com/community-scripts/ProxmoxVE/raw/main/ct
    - Upstash: Redis and Kafka
 
 ## Usage
+
+### Helper Commands
+```bash
+claude-setup   # First-time configuration wizard
+claude-status  # Check configuration status
+```
 
 ### Claude Code Commands
 ```bash
@@ -66,8 +81,9 @@ claude mcp remove  # Remove server
 ## Default Credentials
 
 - **User**: `dev`
-- **Password**: Set during installation or auto-generated
+- **Password**: Randomly generated and displayed after LXC creation
 - **SSH**: Enabled by default
+- **Root login**: Disabled for security
 
 ## Resources
 
