@@ -56,12 +56,12 @@ msg_info "Setting up Development User"
 useradd -m -s /bin/zsh -G sudo dev
 echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
 
-# Set password for dev user if provided
+# Set password for dev user
 if [[ -n "$PASSWORD" ]]; then
+  # Use the password provided by the main script
   echo "dev:$PASSWORD" | chpasswd
   # Store password for display in main script
   echo "$PASSWORD" > /tmp/dev_password
-  DEV_PW="$PASSWORD"
 else
   # Generate random password if none provided
   DEV_PW=$(openssl rand -base64 12)
@@ -303,6 +303,7 @@ if [ ! -f ~/.claude-configured ]; then
         if claude auth "$api_key" &>/dev/null; then
             touch ~/.claude-configured
             echo "✅ Claude Code configured successfully!"
+            
             echo
             echo "Would you like to set up MCP servers now?"
             read -p "Setup MCP servers? [y/N]: " -n 1 -r
@@ -319,6 +320,8 @@ if [ ! -f ~/.claude-configured ]; then
         echo "Skipping Claude Code configuration. You can set it up later by running:"
         echo "~/first-run.sh"
     fi
+else
+    echo "Claude Code is already configured. Run 'claude-status' to check your setup."
 fi
 EOF
 chmod +x /home/dev/first-run.sh

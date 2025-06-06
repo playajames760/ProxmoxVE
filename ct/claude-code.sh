@@ -79,12 +79,15 @@ start
 build_container
 description
 
+# Get the container IP address
+IP=$(pct exec "$CTID" ip a s dev eth0 | awk '/inet / {print $2}' | cut -d/ -f1)
+
 # Read the dev user password from the container
 if pct exec $CTID -- test -f /tmp/dev_password; then
   DEV_PW=$(pct exec $CTID -- cat /tmp/dev_password)
   pct exec $CTID -- rm /tmp/dev_password
 else
-  DEV_PW="Not set"
+  DEV_PW="Password generation failed"
 fi
 
 msg_ok "Completed Successfully!\n"
