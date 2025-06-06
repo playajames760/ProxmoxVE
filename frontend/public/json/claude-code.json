@@ -1,0 +1,52 @@
+{
+  "name": "Claude Code",
+  "slug": "claude-code",
+  "categories": [
+    23
+  ],
+  "date_created": "2025-01-07",
+  "type": "ct",
+  "updateable": true,
+  "privileged": false,
+  "interface_port": 22,
+  "documentation": null,
+  "website": "https://docs.anthropic.com/en/docs/claude-code",
+  "logo": "https://www.anthropic.com/images/logos/claude-ai.png",
+  "config_path": "",
+  "description": "Claude Code is Anthropic's official CLI tool that helps users with software engineering tasks. This LXC includes Claude Code, claude-nine, and 5 MCP servers for enhanced development capabilities.",
+  "install_methods": [
+    {
+      "type": "default",
+      "script": "ct/claude-code.sh",
+      "resources": {
+        "cpu": 2,
+        "ram": 4096,
+        "hdd": 20,
+        "os": "ubuntu",
+        "version": "24.04"
+      }
+    }
+  ],
+  "default_credentials": {
+    "username": "dev",
+    "password": "generated during setup"
+  },
+  "notes": [
+    {
+      "text": "SSH access is enabled by default. Connect using: ssh dev@<IP-ADDRESS>",
+      "type": "info"
+    },
+    {
+      "text": "You need an Anthropic API key to use Claude Code. Get one from https://console.anthropic.com/settings/keys",
+      "type": "warning"
+    },
+    {
+      "text": "First-run configuration wizard will help you set up your API key and MCP servers",
+      "type": "info"
+    },
+    {
+      "text": "Includes claude-nine for enhanced command line interfaces and 5 MCP servers (Supabase, DigitalOcean, Shopify, Puppeteer, Upstash)",
+      "type": "info"
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2021-2024 tteck
+# Author: tteck (tteckster)
+# License: MIT
+# https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+
+source /dev/stdin <<< "$FUNCTIONS_FILE_PATH"
+color
+verb_ip6
+catch_errors
+setting_up_container
+network_check
+update_os
+
+msg_info "Installing Dependencies"
+$STD apt-get install -y \
+  curl \
+  sudo \
+  make \
+  mc \
+  git \
+  build-essential \
+  software-properties-common \
+  apt-transport-https \
+  ca-certificates \
+  gnupg \
+  lsb-release \
+  zsh \
+  tmux \
+  htop \
+  neovim \
+  unzip \
+  jq \
+  python3 \
+  python3-pip \
+  openssh-server \
+  ufw \
+  fail2ban \
+  net-tools
+msg_ok "Installed Dependencies"
+
+msg_info "Setting up Node.js Repository"
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash - &>/dev/null
+msg_ok "Set up Node.js Repository"
+
+msg_info "Installing Node.js"
+$STD apt-get install -y nodejs
+msg_ok "Installed Node.js"
+
+msg_info "Installing Package Managers"
+$STD npm install -g yarn pnpm typescript
+msg_ok "Installed Package Managers"
+
+msg_info "Setting up Development User"
+useradd -m -s /bin/zsh -G sudo dev
+echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
+msg_ok "Created Development User"
+
+msg_info "Installing Oh My Zsh"
+$STD su - dev -c 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
+msg_ok "Installed Oh My Zsh"
+
+msg_info "Installing Claude Code"
+$STD npm install -g @anthropic-ai/claude-code
+msg_ok "Installed Claude Code"
+
+msg_info "Setting up claude-nine"
+$STD su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine'
+$STD su - dev -c 'cd ~/claude-nine && npm install'
+msg_ok "Set up claude-nine"
+
+msg_info "Creating Development Directories"
+su - dev -c 'mkdir -p ~/workspace ~/projects ~/.config/claude-code'
+msg_ok "Created Development Directories"
+
+msg_info "Configuring SSH"
+sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+systemctl restart ssh
+msg_ok "Configured SSH"
+
+msg_info "Setting up Firewall"
+ufw allow ssh &>/dev/null
+echo "y" | ufw enable &>/dev/null
+msg_ok "Set up Firewall"
+
+msg_info "Creating Welcome Script"
+cat > /home/dev/welcome.sh << 'EOF'
+#!/bin/bash
+echo "
+╔══════════════════════════════════════════════════════════════╗
+║          Welcome to Claude Code Development Environment       ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Quick Commands:                                             ║
+║  • claude         - Start Claude Code CLI                    ║
+║  • claude chat    - Start interactive chat                   ║
+║  • claude commit  - Create a commit                          ║
+║  • claude help    - Show all commands                        ║
+║                                                              ║
+║  Directories:                                                ║
+║  • ~/workspace    - General workspace                        ║
+║  • ~/projects     - Project directory                        ║
+║  • ~/claude-nine  - claude-nine installation                 ║
+║                                                              ║
+║  First Time Setup:                                           ║
+║  1. Set your Claude API key:                                 ║
+║     export ANTHROPIC_API_KEY='your-api-key'                  ║
+║     claude auth $ANTHROPIC_API_KEY                           ║
+║                                                              ║
+║  2. Get API key from:                                        ║
+║     https://console.anthropic.com/settings/keys              ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+"
+EOF
+chmod +x /home/dev/welcome.sh
+echo "/home/dev/welcome.sh" >> /home/dev/.zshrc
+chown -R dev:dev /home/dev
+msg_ok "Created Welcome Script"
+
+msg_info "Creating Setup Helper"
+cat > /home/dev/setup-mcp.sh << 'EOF'
+#!/bin/bash
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+msg() {
+    echo -e "${2}${1}${NC}"
+}
+
+# API Key setup function
+setup_api_key() {
+    local service=$1
+    local key_name=$2
+    local key_url=$3
+    
+    msg "\nSetting up $service..." "$YELLOW"
+    msg "Get your API key from: $key_url" "$BLUE"
+    read -s -p "Enter your $service API key (or press Enter to skip): " api_key
+    echo
+    
+    if [[ -n "$api_key" ]]; then
+        echo "export ${key_name}='$api_key'" >> ~/.zshrc
+        echo "export ${key_name}='$api_key'" >> ~/.bashrc
+        export ${key_name}="$api_key"
+        msg "$service API key configured!" "$GREEN"
+        return 0
+    else
+        msg "Skipping $service setup" "$YELLOW"
+        return 1
+    fi
+}
+
+msg "=== MCP Servers Setup ===" "$BLUE"
+
+# Supabase MCP
+if read -p "Install Supabase MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo
+    if setup_api_key "Supabase" "SUPABASE_ACCESS_TOKEN" "https://supabase.com/dashboard/account/tokens"; then
+        claude mcp add supabase -- npx -y @supabase/mcp-server-supabase@latest --access-token $SUPABASE_ACCESS_TOKEN
+    fi
+fi
+
+# DigitalOcean MCP
+if read -p "Install DigitalOcean MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo
+    if setup_api_key "DigitalOcean" "DIGITALOCEAN_API_TOKEN" "https://cloud.digitalocean.com/account/api/tokens"; then
+        claude mcp add digitalocean -- env DIGITALOCEAN_API_TOKEN=$DIGITALOCEAN_API_TOKEN npx @digitalocean/mcp
+    fi
+fi
+
+# Shopify MCP
+if read -p "Install Shopify Dev MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo
+    claude mcp add shopify-dev-mcp -- npx -y @shopify/dev-mcp@latest
+fi
+
+# Puppeteer MCP
+if read -p "Install Puppeteer MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo
+    # Install Chrome dependencies
+    sudo apt-get install -y \
+        libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+        libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
+        libxrandr2 libgbm1 libasound2
+    claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
+fi
+
+# Upstash MCP
+if read -p "Install Upstash MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo
+    msg "Get your Upstash credentials from: https://console.upstash.com" "$BLUE"
+    read -p "Enter Upstash email: " upstash_email
+    read -s -p "Enter Upstash token: " upstash_token
+    echo
+    if [[ -n "$upstash_email" && -n "$upstash_token" ]]; then
+        claude mcp add upstash -- npx -y @upstash/mcp-server run $upstash_email $upstash_token
+    fi
+fi
+
+msg "\nMCP setup complete!" "$GREEN"
+msg "Run 'claude mcp list' to see installed servers" "$BLUE"
+EOF
+chmod +x /home/dev/setup-mcp.sh
+chown dev:dev /home/dev/setup-mcp.sh
+msg_ok "Created MCP Setup Helper"
+
+msg_info "Creating First-Run Configuration"
+cat > /home/dev/first-run.sh << 'EOF'
+#!/bin/bash
+
+if [ ! -f ~/.claude-configured ]; then
+    echo "
+╔══════════════════════════════════════════════════════════════╗
+║               First Time Claude Code Setup                    ║
+╚══════════════════════════════════════════════════════════════╝
+"
+    echo "To use Claude Code, you need an Anthropic API key."
+    echo "Get your API key from: https://console.anthropic.com/settings/keys"
+    echo
+    read -s -p "Enter your Anthropic API key: " api_key
+    echo
+    
+    if [[ -n "$api_key" ]]; then
+        echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.zshrc
+        echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.bashrc
+        export ANTHROPIC_API_KEY="$api_key"
+        claude auth $api_key
+        touch ~/.claude-configured
+        echo "Claude Code configured successfully!"
+        echo
+        echo "Would you like to set up MCP servers now?"
+        read -p "Setup MCP servers? [y/N]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            ~/setup-mcp.sh
+        fi
+    else
+        echo "Skipping Claude Code configuration. You can set it up later by running:"
+        echo "export ANTHROPIC_API_KEY='your-api-key'"
+        echo "claude auth \$ANTHROPIC_API_KEY"
+    fi
+fi
+EOF
+chmod +x /home/dev/first-run.sh
+echo "~/first-run.sh" >> /home/dev/.zshrc
+chown dev:dev /home/dev/first-run.sh
+msg_ok "Created First-Run Configuration"
+
+motd_ssh
+customize
+
+msg_info "Cleaning up"
+$STD apt-get -y autoremove
+$STD apt-get -y autoclean
+msg_ok "Cleaned"
