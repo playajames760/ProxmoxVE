@@ -15,7 +15,7 @@ Claude Code is Anthropic's official CLI tool that helps users with software engi
 Run the script on your Proxmox VE host:
 
 ```bash
-bash -c "$(wget -qO - https://github.com/community-scripts/ProxmoxVE/raw/main/ct/claude-code.sh)"
+bash -c "$(wget -qO - https://github.com/playajames760/ProxmoxVE/raw/main/ct/claude-code.sh)"
 ```
 
 ## First-Time Setup
@@ -97,7 +97,7 @@ claude mcp remove  # Remove server
 To update Claude Code and dependencies:
 
 ```bash
-bash -c "$(wget -qO - https://github.com/community-scripts/ProxmoxVE/raw/main/ct/claude-code.sh)" -- --update
+bash -c "$(wget -qO - https://github.com/playajames760/ProxmoxVE/raw/main/ct/claude-code.sh)" -- --update
 ```
 
 ## Support

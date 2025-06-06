@@ -3,7 +3,7 @@
 # Copyright (c) 2021-2024 tteck
 # Author: tteck (tteckster)
 # License: MIT
-# https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# https://github.com/playajames760/ProxmoxVE/raw/main/LICENSE
 
 source /dev/stdin <<< "$FUNCTIONS_FILE_PATH"
 color
@@ -57,11 +57,11 @@ useradd -m -s /bin/zsh -G sudo dev
 echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
 
 # Set password for dev user if provided
-if [[ -n "$PW" ]]; then
-  echo "dev:$PW" | chpasswd
+if [[ -n "$PASSWORD" ]]; then
+  echo "dev:$PASSWORD" | chpasswd
   # Store password for display in main script
-  echo "$PW" > /tmp/dev_password
-  DEV_PW="$PW"
+  echo "$PASSWORD" > /tmp/dev_password
+  DEV_PW="$PASSWORD"
 else
   # Generate random password if none provided
   DEV_PW=$(openssl rand -base64 12)
