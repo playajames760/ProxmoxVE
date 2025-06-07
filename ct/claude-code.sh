@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/playajames760/ProxmoxVE/main/misc/build.func)
-# Copyright (c) 2021-2024 tteck
-# Author: tteck
-# Co-Author: MickLesk (Canbiz)
-# License: MIT
-# https://github.com/playajames760/ProxmoxVE/raw/main/LICENSE
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+# Copyright (c) 2021-2025 community-scripts ORG
+# Author: playajames760
+# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# Source: https://docs.anthropic.com/en/docs/claude-code
 
 function header_info {
   clear
@@ -17,14 +16,17 @@ function header_info {
                                                              
 EOF
 }
-header_info
-echo -e "Loading..."
-APP="claude-code"
-var_disk="20"
+APP="Claude Code"
+var_tags="development;ai"
 var_cpu="2"
 var_ram="4096"
+var_disk="20"
 var_os="ubuntu"
 var_version="24.04"
+var_unprivileged="1"
+
+header_info "$APP"
+echo -e "Loading..."
 variables
 color
 catch_errors
@@ -55,21 +57,20 @@ function default_settings() {
 
 function update_script() {
   header_info
-  if [[ ! -d /home/dev/claude-nine ]]; then
+  check_container_storage
+  check_container_resources
+  
+  if [[ ! -f /usr/local/bin/claude ]]; then
     msg_error "No ${APP} Installation Found!"
     exit
   fi
+  
   msg_info "Updating ${APP} LXC"
-  apt-get update &>/dev/null
-  apt-get -y upgrade &>/dev/null
+  $STD apt-get update
+  $STD apt-get -y upgrade
   
   msg_info "Updating Claude Code"
-  npm update -g @anthropic-ai/claude-code &>/dev/null
-  
-  msg_info "Updating claude-nine"
-  cd /home/dev/claude-nine
-  git pull &>/dev/null
-  npm update &>/dev/null
+  $STD npm update -g @anthropic-ai/claude-code
   
   msg_ok "Updated Successfully"
   exit

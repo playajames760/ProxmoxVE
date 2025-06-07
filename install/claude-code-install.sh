@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2021-2024 tteck
-# Author: tteck (tteckster)
-# License: MIT
-# https://github.com/playajames760/ProxmoxVE/raw/main/LICENSE
+# Copyright (c) 2021-2025 community-scripts ORG
+# Author: playajames760
+# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# Source: https://docs.anthropic.com/en/docs/claude-code
 
 source /dev/stdin <<< "$FUNCTIONS_FILE_PATH"
 SPINNER_PID=""
@@ -86,18 +86,6 @@ $STD npm install -g @anthropic-ai/claude-code
 su - dev -c 'claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer' &>/dev/null
 msg_ok "Installed Claude Code"
 
-msg_info "Setting up claude-nine"
-# Handle git clone
-if [ -d "/home/dev/claude-nine" ]; then
-  su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
-fi
-su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine' &>/dev/null
-# Create .config/claude-code directory if it doesn't exist
-su - dev -c 'mkdir -p ~/.config/claude-code' &>/dev/null
-# Move commands directory
-su - dev -c 'cp -r ~/claude-nine/commands ~/.config/claude-code/' &>/dev/null
-su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
-msg_ok "Set up claude-nine"
 
 msg_info "Creating Development Directories"
 su - dev -c 'mkdir -p ~/workspace'
@@ -210,29 +198,6 @@ msg() {
     echo -e "${2}${1}${NC}"
 }
 
-# API Key setup function
-setup_api_key() {
-    local service=$1
-    local key_name=$2
-    local key_url=$3
-    
-    msg "\nSetting up $service..." "$YELLOW"
-    msg "Get your API key from: $key_url" "$BLUE"
-    read -s -p "Enter your $service API key (or press Enter to skip): " api_key
-    echo
-    
-    if [[ -n "$api_key" ]]; then
-        echo "export ${key_name}='$api_key'" >> ~/.zshrc
-        echo "export ${key_name}='$api_key'" >> ~/.bashrc
-        export ${key_name}="$api_key"
-        msg "$service API key configured!" "$GREEN"
-        return 0
-    else
-        msg "Skipping $service setup" "$YELLOW"
-        return 1
-    fi
-}
-
 msg "=== MCP Servers Setup ===" "$BLUE"
 
 # Supabase MCP
@@ -256,18 +221,6 @@ if read -p "Install Shopify Dev MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]];
     echo
     claude mcp add shopify-dev-mcp -- npx -y @shopify/dev-mcp@latest
 fi
-
-# Puppeteer MCP
-# Now installed by default
-# if read -p "Install Puppeteer MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
-#     echo
-#     # Install Chrome dependencies
-#     sudo apt-get install -y \
-#         libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-#         libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
-#         libxrandr2 libgbm1 libasound2
-#     claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
-# fi
 
 # Upstash MCP
 if read -p "Install Upstash MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
