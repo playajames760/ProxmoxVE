@@ -149,8 +149,16 @@ sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
-systemctl restart ssh
-msg_ok "Configured SSH"
+# Enable SSH service on boot and restart it
+systemctl enable ssh &>/dev/null || systemctl enable sshd &>/dev/null
+systemctl restart ssh || systemctl restart sshd
+# Verify SSH is running
+if systemctl is-active --quiet ssh || systemctl is-active --quiet sshd; then
+  msg_ok "Configured SSH"
+else
+  msg_error "SSH service failed to start"
+  exit 1
+fi
 
 msg_info "Setting up Firewall"
 ufw allow ssh &>/dev/null
