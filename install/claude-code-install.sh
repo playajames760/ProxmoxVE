@@ -6,6 +6,9 @@
 # https://github.com/playajames760/ProxmoxVE/raw/main/LICENSE
 
 source /dev/stdin <<< "$FUNCTIONS_FILE_PATH"
+SPINNER_PID=""
+SPINNER_ACTIVE=0
+SPINNER_MSG=""
 color
 verb_ip6
 catch_errors
@@ -40,7 +43,7 @@ $STD apt-get install -y \
   net-tools \
   libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
   libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
-  libxrandr2 libgbm1 libasound2
+  libxrandr2 libgbm1 libasound2t64
 msg_ok "Installed Dependencies"
 
 msg_info "Setting up Node.js Repository"

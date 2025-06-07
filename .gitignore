@@ -75,3 +75,6 @@ json/.vscode/
 .git/
 .gitignore
 .vscode/settings.json
+
+# MCP configuration (contains secrets)
+.mcp.json
