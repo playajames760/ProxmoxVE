@@ -74,9 +74,10 @@ msg_info "Installing Oh My Zsh"
 $STD su - dev -c 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
 msg_ok "Installed Oh My Zsh"
 
-msg_info "Installing Claude Code"
-$STD npm install -g @anthropic-ai/claude-code
-msg_ok "Installed Claude Code"
+# Removed Claude Code installation as per user's request.
+# msg_info "Installing Claude Code"
+# $STD npm install -g @anthropic-ai/claude-code
+# msg_ok "Installed Claude Code"
 
 msg_info "Setting up claude-nine"
 # Handle git clone without using $STD to avoid silent function issues
@@ -116,14 +117,9 @@ echo "Claude Code Status:"
 echo "==================="
 
 if [ -f ~/.claude-configured ]; then
-    echo "✅ Claude Code is configured"
-    if [ -n "$ANTHROPIC_API_KEY" ]; then
-        echo "✅ API key is set in environment"
-    else
-        echo "⚠️  API key not in current environment (may need to restart shell)"
-    fi
+    echo "✅ Development environment configured"
 else
-    echo "❌ Claude Code not configured - run 'claude-setup' to configure"
+    echo "❌ Development environment not configured - run 'claude-setup' to configure"
 fi
 
 echo
@@ -158,7 +154,7 @@ cat > /home/dev/welcome.sh << 'EOF'
 #!/bin/bash
 echo "
 ╔══════════════════════════════════════════════════════════════╗
-║          Welcome to Claude Code Development Environment       ║
+║          Welcome to Claude Code Development Environment      ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
 ║  Quick Commands:                                             ║
@@ -171,14 +167,6 @@ echo "
 ║  • ~/workspace    - General workspace                        ║
 ║  • ~/projects     - Project directory                        ║
 ║  • ~/claude-nine  - claude-nine installation                 ║
-║                                                              ║
-║  Authentication:                                             ║
-║  Claude Code uses API-based authentication with your         ║
-║  Anthropic API key. Usage is billed through your             ║
-║  Anthropic account.                                          ║
-║                                                              ║
-║  Get API key from:                                           ║
-║  https://console.anthropic.com/settings/keys                 ║
 ║                                                              ║
 ║  Setup Helper: ~/first-run.sh                                ║
 ║                                                              ║
@@ -289,46 +277,31 @@ cat > /home/dev/first-run.sh << 'EOF'
 if [ ! -f ~/.claude-configured ]; then
     echo "
 ╔══════════════════════════════════════════════════════════════╗
-║               First Time Claude Code Setup                    ║
+║                First Time User Setup                         ║
 ╚══════════════════════════════════════════════════════════════╝
 "
-    echo "To use Claude Code, you need an Anthropic API key."
-    echo "Get your API key from: https://console.anthropic.com/settings/keys"
-    echo
-    echo "Note: Claude Code uses API-based billing. You'll be charged for"
-    echo "API usage based on your interactions with Claude."
-    echo
-    read -s -p "Enter your Anthropic API key: " api_key
-    echo
-    
-    if [[ -n "$api_key" ]]; then
-        echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.zshrc
-        echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.bashrc
-        export ANTHROPIC_API_KEY="$api_key"
-        
-        # Test the API key by authenticating
-        if claude auth "$api_key" &>/dev/null; then
-            touch ~/.claude-configured
-            echo "✅ Claude Code configured successfully!"
-            
-            echo
-            echo "Would you like to set up MCP servers now?"
-            read -p "Setup MCP servers? [y/N]: " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                ~/setup-mcp.sh
-            fi
-        else
-            echo "❌ Failed to authenticate with the provided API key."
-            echo "Please check your API key and try again by running:"
-            echo "~/first-run.sh"
-        fi
+    echo "It is highly recommended to change the 'dev' user's password for security."
+    echo "You will be prompted to enter a new password for the 'dev' user."
+    passwd
+    if [ $? -eq 0 ]; then
+        echo "✅ Password changed successfully!"
+        touch ~/.claude-configured
     else
-        echo "Skipping Claude Code configuration. You can set it up later by running:"
-        echo "~/first-run.sh"
+        echo "❌ Failed to change password. You can try again later by running 'passwd'."
     fi
+            
+    echo
+    echo "Would you like to set up MCP servers now?"
+    read -p "Setup MCP servers? [y/N]: " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        ~/setup-mcp.sh
+    fi
+    clear
+    ~/welcome.sh
 else
-    echo "Claude Code is already configured. Run 'claude-status' to check your setup."
+    clear
+    ~/welcome.sh
 fi
 EOF
 chmod +x /home/dev/first-run.sh
