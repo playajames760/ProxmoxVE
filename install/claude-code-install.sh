@@ -148,7 +148,10 @@ sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-sed -i 's/#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
+sed -i 's/#MaxAuthTries.*/MaxAuthTries 6/' /etc/ssh/sshd_config
+sed -i 's/#AddressFamily.*/AddressFamily any/' /etc/ssh/sshd_config
+# Ensure AddressFamily is set if not present
+grep -q "^AddressFamily" /etc/ssh/sshd_config || echo "AddressFamily any" >> /etc/ssh/sshd_config
 # Enable SSH service on boot and restart it
 systemctl enable ssh &>/dev/null || systemctl enable sshd &>/dev/null
 systemctl restart ssh || systemctl restart sshd
