@@ -37,7 +37,10 @@ $STD apt-get install -y \
   openssh-server \
   ufw \
   fail2ban \
-  net-tools
+  net-tools \
+  libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+  libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
+  libxrandr2 libgbm1 libasound2
 msg_ok "Installed Dependencies"
 
 msg_info "Setting up Node.js Repository"
@@ -74,25 +77,24 @@ msg_info "Installing Oh My Zsh"
 $STD su - dev -c 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
 msg_ok "Installed Oh My Zsh"
 
-# Removed Claude Code installation as per user's request.
-# msg_info "Installing Claude Code"
-# $STD npm install -g @anthropic-ai/claude-code
-# msg_ok "Installed Claude Code"
+
+msg_info "Installing Claude Code"
+$STD npm install -g @anthropic-ai/claude-code
+su - dev -c 'claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer' &>/dev/null
+msg_ok "Installed Claude Code"
 
 msg_info "Setting up claude-nine"
-# Handle git clone without using $STD to avoid silent function issues
+# Handle git clone
 if [ -d "/home/dev/claude-nine" ]; then
   su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
 fi
 su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine' &>/dev/null
-# Only run npm install if package.json exists
-if [ -f "/home/dev/claude-nine/package.json" ]; then
-  su - dev -c 'cd ~/claude-nine && npm install' &>/dev/null
-fi
+su - dev -c 'mv ~/claude-nine/commands ~/.config/claude-code/' &>/dev/null
+su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
 msg_ok "Set up claude-nine"
 
 msg_info "Creating Development Directories"
-su - dev -c 'mkdir -p ~/workspace ~/projects ~/.config/claude-code'
+su - dev -c 'mkdir -p ~/workspace'
 msg_ok "Created Development Directories"
 
 msg_info "Creating CLI Helper Scripts"
@@ -165,8 +167,6 @@ echo "
 ║                                                              ║
 ║  Directories:                                                ║
 ║  • ~/workspace    - General workspace                        ║
-║  • ~/projects     - Project directory                        ║
-║  • ~/claude-nine  - claude-nine installation                 ║
 ║                                                              ║
 ║  Setup Helper: ~/first-run.sh                                ║
 ║                                                              ║
@@ -241,15 +241,16 @@ if read -p "Install Shopify Dev MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]];
 fi
 
 # Puppeteer MCP
-if read -p "Install Puppeteer MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo
-    # Install Chrome dependencies
-    sudo apt-get install -y \
-        libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-        libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
-        libxrandr2 libgbm1 libasound2
-    claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
-fi
+# Now installed by default
+# if read -p "Install Puppeteer MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
+#     echo
+#     # Install Chrome dependencies
+#     sudo apt-get install -y \
+#         libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+#         libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 \
+#         libxrandr2 libgbm1 libasound2
+#     claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
+# fi
 
 # Upstash MCP
 if read -p "Install Upstash MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
