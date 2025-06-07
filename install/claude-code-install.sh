@@ -297,12 +297,39 @@ if [ ! -f ~/.claude-configured ]; then
 "
     echo "It is highly recommended to change the 'dev' user's password for security."
     echo "You will be prompted to enter a new password for the 'dev' user."
-    passwd
-    if [ $? -eq 0 ]; then
-        echo "✅ Password changed successfully!"
-        touch ~/.claude-configured
+    
+    # Check if we have a default password set
+    if [ -f /tmp/dev_password ]; then
+        OLD_PW=$(cat /tmp/dev_password)
+        # Use a different approach for password change
+        echo "Please enter a new password:"
+        read -s NEW_PW1
+        echo
+        echo "Please confirm the new password:"
+        read -s NEW_PW2
+        echo
+        
+        if [ "$NEW_PW1" = "$NEW_PW2" ]; then
+            echo -e "$OLD_PW\n$NEW_PW1\n$NEW_PW1" | passwd 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo "✅ Password changed successfully!"
+                rm -f /tmp/dev_password
+                touch ~/.claude-configured
+            else
+                echo "❌ Failed to change password. You can try again later by running 'passwd'."
+                echo "Note: To change password manually, use: sudo passwd dev"
+            fi
+        else
+            echo "❌ Passwords do not match. You can try again later by running 'passwd'."
+        fi
     else
-        echo "❌ Failed to change password. You can try again later by running 'passwd'."
+        # If no default password file exists, suggest using sudo
+        echo "❌ Unable to change password automatically."
+        echo "Please run the following command to set a password:"
+        echo "  sudo passwd dev"
+        echo
+        read -p "Press Enter to continue..."
+        touch ~/.claude-configured
     fi
             
     echo
