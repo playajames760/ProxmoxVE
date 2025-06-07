@@ -83,7 +83,6 @@ msg_ok "Installed Oh My Zsh"
 
 msg_info "Installing Claude Code"
 $STD npm install -g @anthropic-ai/claude-code
-su - dev -c 'claude mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer' &>/dev/null
 msg_ok "Installed Claude Code"
 
 
@@ -119,14 +118,22 @@ else
 fi
 
 echo
-echo "MCP Servers:"
-claude mcp list 2>/dev/null || echo "No MCP servers configured"
+echo "MCP Configuration:"
+if [ -f ~/.config/claude/claude_desktop_config.json ]; then
+    echo "✅ Global MCP config exists"
+elif [ -f ~/workspace/.mcp.json ]; then
+    echo "✅ Workspace MCP config exists (~/workspace/.mcp.json)"
+    echo "   Use: claude --mcp-config ~/workspace/.mcp.json"
+else
+    echo "❌ No MCP configuration found"
+fi
 
 echo
 echo "Useful commands:"
 echo "• claude-setup   - Configure Claude Code"
 echo "• claude help    - Show Claude commands"
 echo "• claude chat    - Start interactive chat"
+echo "• claude --mcp-config ~/workspace/.mcp.json  - Start with MCP servers"
 EOF
 chmod +x /usr/local/bin/claude-status
 msg_ok "Created CLI Helper Scripts"
@@ -170,8 +177,11 @@ echo "
 ║  • claude commit  - Create a commit                          ║
 ║  • claude help    - Show all commands                        ║
 ║                                                              ║
+║  With MCP servers:                                           ║
+║  • claude --mcp-config ~/workspace/.mcp.json                 ║
+║                                                              ║
 ║  Directories:                                                ║
-║  • ~/workspace    - General workspace                        ║
+║  • ~/workspace    - General workspace (contains .mcp.json)   ║
 ║                                                              ║
 ║  Setup Helper: ~/first-run.sh                                ║
 ║                                                              ║
@@ -198,13 +208,49 @@ msg() {
     echo -e "${2}${1}${NC}"
 }
 
+setup_api_key() {
+    local service_name="$1"
+    local var_name="$2"
+    local url="$3"
+    
+    msg "Get your $service_name API key from: $url" "$BLUE"
+    read -s -p "Enter $service_name API key: " api_key
+    echo
+    if [[ -n "$api_key" ]]; then
+        export $var_name="$api_key"
+        return 0
+    else
+        msg "No API key provided, skipping $service_name" "$YELLOW"
+        return 1
+    fi
+}
+
+# Initialize MCP config file
+MCP_CONFIG="$HOME/workspace/.mcp.json"
+cat > "$MCP_CONFIG" << 'JSON'
+{
+  "mcpServers": {}
+}
+JSON
+
 msg "=== MCP Servers Setup ===" "$BLUE"
+
+# Puppeteer MCP (always install)
+msg "Installing Puppeteer MCP..." "$GREEN"
+jq '.mcpServers.puppeteer = {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+}' "$MCP_CONFIG" > "$MCP_CONFIG.tmp" && mv "$MCP_CONFIG.tmp" "$MCP_CONFIG"
 
 # Supabase MCP
 if read -p "Install Supabase MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
     echo
     if setup_api_key "Supabase" "SUPABASE_ACCESS_TOKEN" "https://supabase.com/dashboard/account/tokens"; then
-        claude mcp add supabase -- npx -y @supabase/mcp-server-supabase@latest --access-token $SUPABASE_ACCESS_TOKEN
+        jq --arg token "$SUPABASE_ACCESS_TOKEN" '.mcpServers.supabase = {
+          "command": "npx",
+          "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", $token]
+        }' "$MCP_CONFIG" > "$MCP_CONFIG.tmp" && mv "$MCP_CONFIG.tmp" "$MCP_CONFIG"
+        msg "✅ Supabase MCP added" "$GREEN"
     fi
 fi
 
@@ -212,14 +258,25 @@ fi
 if read -p "Install DigitalOcean MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
     echo
     if setup_api_key "DigitalOcean" "DIGITALOCEAN_API_TOKEN" "https://cloud.digitalocean.com/account/api/tokens"; then
-        claude mcp add digitalocean -- env DIGITALOCEAN_API_TOKEN=$DIGITALOCEAN_API_TOKEN npx @digitalocean/mcp
+        jq --arg token "$DIGITALOCEAN_API_TOKEN" '.mcpServers.digitalocean = {
+          "command": "npx",
+          "args": ["@digitalocean/mcp"],
+          "env": {
+            "DIGITALOCEAN_API_TOKEN": $token
+          }
+        }' "$MCP_CONFIG" > "$MCP_CONFIG.tmp" && mv "$MCP_CONFIG.tmp" "$MCP_CONFIG"
+        msg "✅ DigitalOcean MCP added" "$GREEN"
     fi
 fi
 
 # Shopify MCP
 if read -p "Install Shopify Dev MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; then
     echo
-    claude mcp add shopify-dev-mcp -- npx -y @shopify/dev-mcp@latest
+    jq '.mcpServers["shopify-dev"] = {
+      "command": "npx",
+      "args": ["-y", "@shopify/dev-mcp@latest"]
+    }' "$MCP_CONFIG" > "$MCP_CONFIG.tmp" && mv "$MCP_CONFIG.tmp" "$MCP_CONFIG"
+    msg "✅ Shopify Dev MCP added" "$GREEN"
 fi
 
 # Upstash MCP
@@ -230,12 +287,17 @@ if read -p "Install Upstash MCP? [y/N]: " -n 1 -r && [[ $REPLY =~ ^[Yy]$ ]]; the
     read -s -p "Enter Upstash token: " upstash_token
     echo
     if [[ -n "$upstash_email" && -n "$upstash_token" ]]; then
-        claude mcp add upstash -- npx -y @upstash/mcp-server run $upstash_email $upstash_token
+        jq --arg email "$upstash_email" --arg token "$upstash_token" '.mcpServers.upstash = {
+          "command": "npx",
+          "args": ["-y", "@upstash/mcp-server", "run", $email, $token]
+        }' "$MCP_CONFIG" > "$MCP_CONFIG.tmp" && mv "$MCP_CONFIG.tmp" "$MCP_CONFIG"
+        msg "✅ Upstash MCP added" "$GREEN"
     fi
 fi
 
 msg "\nMCP setup complete!" "$GREEN"
-msg "Run 'claude mcp list' to see installed servers" "$BLUE"
+msg "Configuration saved to ~/workspace/.mcp.json" "$BLUE"
+msg "Use 'claude --mcp-config ~/workspace/.mcp.json' to use these servers" "$BLUE"
 EOF
 chmod +x /home/dev/setup-mcp.sh
 chown dev:dev /home/dev/setup-mcp.sh
@@ -313,4 +375,10 @@ customize
 msg_info "Cleaning up"
 $STD apt-get -y autoremove
 $STD apt-get -y autoclean
+# Clean up home directory - only keep workspace and first-run.sh
+su - dev -c 'find ~ -maxdepth 1 -type f ! -name "first-run.sh" ! -name ".zshrc" ! -name ".bashrc" ! -name ".profile" ! -name ".bash_logout" ! -name ".claude-configured" -delete 2>/dev/null || true'
+su - dev -c 'rm -rf ~/.oh-my-zsh/.git 2>/dev/null || true'
+su - dev -c 'rm -f ~/setup-mcp.sh ~/welcome.sh 2>/dev/null || true'
+# Remove temporary password file
+rm -f /tmp/dev_password
 msg_ok "Cleaned"
