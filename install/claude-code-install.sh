@@ -92,7 +92,10 @@ if [ -d "/home/dev/claude-nine" ]; then
   su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
 fi
 su - dev -c 'git clone https://github.com/playajames760/claude-nine.git ~/claude-nine' &>/dev/null
-su - dev -c 'mv ~/claude-nine/commands ~/.config/claude-code/' &>/dev/null
+# Create .config/claude-code directory if it doesn't exist
+su - dev -c 'mkdir -p ~/.config/claude-code' &>/dev/null
+# Move commands directory
+su - dev -c 'cp -r ~/claude-nine/commands ~/.config/claude-code/' &>/dev/null
 su - dev -c 'rm -rf ~/claude-nine' &>/dev/null
 msg_ok "Set up claude-nine"
 
